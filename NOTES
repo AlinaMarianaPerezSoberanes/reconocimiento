@@ -1,0 +1,46 @@
+-----CONSIDERACIONES-----
+Tamaño de imagen 1024x683
+Bloques de 8 | 16 pixceles  <- de umbralizado con otsu basado en regiones de pixeles
+
+----MOMENTOS DE HU PYTHON---
+La imagen del círculo cric.bmp hasta los momentos de orden 3, dan resultados correctos.
+La imagen de hoja.bmp da valores muy aproximados hasta el orden 3.
+
+('n20: ', 1635360934)  0.112389196
+('n02: ', 1034048565)  0.071064365
+('n11: ', -20165086)    −0.001385833
+
+('n30: ', 3697994731875.969)    0.002106846
+('n03: ', 2973071595003.4565)  0.001693838
+('n12: ', 2506226965306.711)   0.001427864
+('n21: ', 2723293048270.1533)  0.001551532
+
+--------MOMENTO 5
+−0.000007694
+−0.000019103
+0.000009609
+0.00002695
+
+0.00014697
+0.000258963
+
+----- MOMENTO 6
+0.000000516
+0.000010532
+
+−0.000010016
+−0.000000064
+
+---MOMENTO 7
+
+0.000010465
+−0.000019103
+0.000007064
+0.00002695
+
+−0.000199913
+0.000190375
+
+
+
+
