@@ -57,8 +57,8 @@ int main(){
     int *hilo,i,k,nhs[NUM_HILOS];                                            //Arreglo de hilos
     pthread_t tids[NUM_HILOS];                                               //Creación de hilos
 
-    imagenRGB=abrirBMP("base.bmp",&info);
-    nueva=abrirBMP("nueva.bmp",&info);
+    imagenRGB=abrirBMP("base7.bmp",&info);
+    nueva=abrirBMP("nueva77.bmp",&info);
 
     displayInfo(&info);
 
