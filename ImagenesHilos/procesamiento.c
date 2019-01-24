@@ -21,6 +21,8 @@ int momento(unsigned char *imagen,int i,int j);
 void momentoHu(unsigned char * img);
 double normalizar(unsigned char *imagen,int momento,int p,int q);
 void* subImagen(void *arg);
+void* sauvola(void *arg);
+void * dilata(void *arg);
 /*FUNCIONES CON HILOS*/
 void * momento1h(void *arg);
 void * momento2h(void *arg);
@@ -52,13 +54,14 @@ unsigned char *nuevaGray;
 unsigned char *nuevaAux;
 unsigned char *nuevaBin;
 unsigned char *otsu;
+unsigned char *imgSau;
 
 int main(){
     int *hilo,i,k,nhs[NUM_HILOS];                                            //Arreglo de hilos
     pthread_t tids[NUM_HILOS];                                               //Creación de hilos
 
     imagenRGB=abrirBMP("base7.bmp",&info);
-    nueva=abrirBMP("nueva77.bmp",&info);
+    nueva=abrirBMP("nueva7.bmp",&info);
 
     displayInfo(&info);
 
@@ -74,6 +77,7 @@ int main(){
     imgBin = reservarMemoria(info.width,info.height);
     nuevaBin=reservarMemoria(info.width,info.height);
     otsu=reservarMemoria(info.width,info.height);
+    imgSau=reservarMemoria(info.width,info.height);
     //filtroPB(imagenGray,imagenAux,info.width,info.height);
 
     for(i=0;i<4;i++){
@@ -85,11 +89,9 @@ int main(){
          printf("\nHilo %d terminado\n",*hilo);
     }
     
-    sustraccion(imagenAux,nuevaAux,info.width,info.height);                 //Sustraccion de imagenes grises
+    sustraccion(imagenAux,nuevaAux,info.width,info.height); 
     int umbral=thotsu(imagenSustrac,info.width,info.height);
     otsu=binarizar(imagenSustrac,umbral,info.width,info.height);               //la binarizacion de la imagen depende no exactamente Ostu*/
-
-     
 
     for(i=0;i<4;i++){
         nhs[i]=i;                                                            //creacion de hilos
@@ -99,9 +101,22 @@ int main(){
          pthread_join(tids[k],(void**)&hilo);                                //espera a que termine la ejecucion del hilo
          printf("\nHilo %d terminado\n",*hilo);
     }
-
-    //subImagen(imagenSustrac, info.width, info.height);
-    //int umbral=thotsu(imagenSustrac,info.width,info.height);                //Obtencion de umbral otsu
+    for(i=0;i<4;i++){
+        nhs[i]=i;                                                            //creacion de hilos
+        pthread_create(&tids[i],NULL,sauvola,(void *)&nhs[i]);               //crea varios hilos
+    }
+    for(k=0;k<4;k++){
+         pthread_join(tids[k],(void**)&hilo);                                //espera a que termine la ejecucion del hilo
+         printf("\nHilo %d terminado\n",*hilo);
+    }
+     for(i=0;i<4;i++){
+        nhs[i]=i;                                                            //creacion de hilos
+        pthread_create(&tids[i],NULL,dilata,(void *)&nhs[i]);               //crea varios hilos
+    }
+    for(k=0;k<4;k++){
+         pthread_join(tids[k],(void**)&hilo);                                //espera a que termine la ejecucion del hilo
+         printf("\nHilo %d terminado\n",*hilo);
+    }
 
 
     //MOMENTO 1 CON HILO
@@ -123,6 +138,8 @@ int main(){
     guardarBMP("imagen_process.bmp",&info,imagenRGB);
     GraytoRGB(imagenRGB,imagenSustrac,info.width,info.height);
     guardarBMP("imagen_sustrac.bmp",&info,imagenRGB);
+    GraytoRGB(imagenRGB,imgSau,info.width,info.height);
+    guardarBMP("imagen_sauvola.bmp",&info,imagenRGB);
 
     //liberar memoria
     free(nueva);
@@ -224,6 +241,128 @@ unsigned char* RGBToGray(unsigned char *imagenRGB,uint32_t width, uint32_t heigh
 
 /* SECCION DE SEGMENTACION DE IMAGEN*/
 
+/*
+Etiquetado de regiones obtenidas del algoritmo sauvola
+Conectividad-4 vecinos, horizontal y vertical
+
+*/
+void etiquetado(unsigned char * imagen, uint32_t width, uint32_t height){       //Segmentacion por umbral
+    register int x,y;
+    int indice,aux;
+    int etiqueta=0; //Gurda y asigna el numero de etiqueta
+    int equivalencia[2]={0,0}; //Guarda la equivalencia
+    unsigned char *img=imagen;
+    
+    for(y=0;y<height;y++){
+        for(x=0;x<width;x++){
+            indice=(y*width+x); //ubicacion pixel actual
+            if (img[indice]==1){
+                if(img[y*width+(x-1)]==0 && img[(y-1)*width+x]==0){
+                    img[indice]=etiqueta;
+                    etiqueta++;
+                }
+                if(img[y*width+(x-1)]==1 && img[(y-1)*width+x]==0){
+                    img[indice]=img[y*width+(x-1)];
+                }
+                if(img[y*width+(x-1)]==0 && img[(y-1)*width+x]==1){
+                    img[indice]=img[(y-1)*width+x];
+                }
+                if(img[y*width+(x-1)]==0 && img[(y-1)*width+x]==1){
+                    img[indice]=img[img[y*width+(x-1)];
+                    equivalencia[0]=y*width+(x-1);
+                    equivalencia[1]=(y-1)*width+x;
+                }if() //Arreglo igual break
+            }
+        }
+    }
+
+    printf("Se encontraron %d objetos", etiqueta);
+
+}
+
+
+
+
+void * dilata(void *arg){
+    register int y,x,ym,xm;
+    int bloque=10;
+    int conv,indiceI,indiceM,aux;
+    int nh=*(int*)arg;
+    int temp[bloque*bloque];
+    int tamBloque=info.height/NUM_HILOS;                                    //bloques por hilo
+    int iniBloque=nh*tamBloque;                                             //inicio del bloque
+    int finBloque=iniBloque+tamBloque;                                      //fin del bloque
+  
+        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer mascara en la imagen
+            for(x=0; x<info.width-bloque; x++){                             //recorrer mascara en la imagen
+                conv=0;
+                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
+                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
+                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
+                        aux=imgSau[indiceI];
+                        if(aux==255)
+                            conv++;
+                    }                                                
+                }
+            if(conv<5){
+                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
+                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
+                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
+                        aux=imgSau[indiceI]*0;                       //indice de la mascara
+                        imgSau[indiceI]=aux;
+                    }                                                
+                }
+            }
+            }
+        }
+    pthread_exit(arg);
+}
+
+
+
+
+/*UMBRALIZACION LOCAL METODO2*/
+void* sauvola(void *arg){
+register int y,x,ym,xm;
+    int bloque=15;
+    float media,desv;
+    int a,k=0.2;
+    double umbral;
+    int indiceI;
+    int nh=*(int*)arg;
+    int tamBloque=info.height/NUM_HILOS;                                    //bloques por hilo
+    int iniBloque=nh*tamBloque;                                             //inicio del bloque
+    int finBloque=iniBloque+tamBloque;   
+    //unsigned char*subi=reservarMemoria(bloque,bloque);                                   //fin del bloque
+  
+        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer mascara en la imagen
+            for(x=0; x<info.width-bloque; x++){                             //recorrer mascara en la imagen
+                media=0.0;
+                desv=0.0;
+                umbral=0;
+                a=0;
+                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
+                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
+                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
+                        media=media+otsu[indiceI]; //media
+                        a=a+pow(imagenSustrac[indiceI],2); // desv
+                    }                                                
+                }
+            //CALCULO DE MEDIA Y DESV
+            media=media/(bloque*bloque);
+            desv=sqrt(a/(bloque*bloque)-pow(media,2));
+
+            umbral=media*(1+(k*(desv/128)-1));
+
+            indiceI=(y+1)*info.width+(x+1);
+            imgSau[indiceI]=((imagenSustrac[indiceI])>=(umbral))?0:255;
+            }
+        }
+     pthread_exit(arg); 
+}
+
+
+/*UMBRALIZACION LOCAL*/
 void* subImagen(void *arg){
     register int y,x,ym,xm,i,j;
     int bloque=5;
@@ -241,11 +380,9 @@ void* subImagen(void *arg){
                     for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
                         indiceI=(ym)*info.width+xm;                           //indice de la imagen
                         temp[cont]=otsu[indiceI];
-                        //subi[cont]=imagenSustrac[indiceI];
                         cont++;
                     }                                                
                 }
-            //int umbral=thotsu(subi,bloque,bloque);
             //ordenamiento de valores
             for (i=1;i<(bloque*bloque);i++)
                 for (j=0;j<(bloque*bloque)-1;j++)
