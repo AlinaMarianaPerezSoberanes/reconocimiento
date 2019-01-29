@@ -60,11 +60,10 @@ int main(){
     int *hilo,i,k,nhs[NUM_HILOS];                                            //Arreglo de hilos
     pthread_t tids[NUM_HILOS];                                               //Creación de hilos
 
-    imagenRGB=abrirBMP("base7.bmp",&info);
-    nueva=abrirBMP("nueva7.bmp",&info);
-
+    imagenRGB=abrirBMP("base10.bmp",&info);
+    nueva=abrirBMP("nueva10.bmp",&info);
+    
     displayInfo(&info);
-
     imagenGray=RGBToGray(imagenRGB,info.width,info.height);
     brilloImagen(imagenGray,info.width,info.height);
 
@@ -109,6 +108,7 @@ int main(){
          pthread_join(tids[k],(void**)&hilo);                                //espera a que termine la ejecucion del hilo
          printf("\nHilo %d terminado\n",*hilo);
     }
+    /*
      for(i=0;i<4;i++){
         nhs[i]=i;                                                            //creacion de hilos
         pthread_create(&tids[i],NULL,dilata,(void *)&nhs[i]);               //crea varios hilos
@@ -116,7 +116,7 @@ int main(){
     for(k=0;k<4;k++){
          pthread_join(tids[k],(void**)&hilo);                                //espera a que termine la ejecucion del hilo
          printf("\nHilo %d terminado\n",*hilo);
-    }
+    }*/
 
 
     //MOMENTO 1 CON HILO
@@ -246,6 +246,7 @@ Etiquetado de regiones obtenidas del algoritmo sauvola
 Conectividad-4 vecinos, horizontal y vertical
 
 */
+/*
 void etiquetado(unsigned char * imagen, uint32_t width, uint32_t height){       //Segmentacion por umbral
     register int x,y;
     int indice,aux;
@@ -278,38 +279,40 @@ void etiquetado(unsigned char * imagen, uint32_t width, uint32_t height){       
 
     printf("Se encontraron %d objetos", etiqueta);
 
-}
+}*/
 
-
-
-
+/*ELEMENTO ESTRUCTURA
+Elimina los objetos que son de área pequeña en la imagen
+se aplica en la imagen resultante de Souvola una vez que es dilatada
+*/
 void * dilata(void *arg){
     register int y,x,ym,xm;
-    int bloque=10;
+    int bloque=200;
+    int b2=80;
     int conv,indiceI,indiceM,aux;
     int nh=*(int*)arg;
-    int temp[bloque*bloque];
+    //int temp[bloque*bloque];
     int tamBloque=info.height/NUM_HILOS;                                    //bloques por hilo
     int iniBloque=nh*tamBloque;                                             //inicio del bloque
     int finBloque=iniBloque+tamBloque;                                      //fin del bloque
   
-        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer mascara en la imagen
-            for(x=0; x<info.width-bloque; x++){                             //recorrer mascara en la imagen
+        for(y=iniBloque-(nh*b2); y<finBloque-b2;y++){               //recorrer imagen
+            for(x=0; x<info.width-bloque; x++){                             
                 conv=0;
-                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
-                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
-                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
+                for(ym=y; ym<y+b2; ym++){                               //Recorre vecindad
+                    for(xm=x; xm<x+bloque; xm++){                           
+                        indiceI=(ym)*info.width+xm;                           
                         aux=imgSau[indiceI];
                         if(aux==255)
                             conv++;
                     }                                                
                 }
-            if(conv<5){
-                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
-                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
-                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
-                        aux=imgSau[indiceI]*0;                       //indice de la mascara
-                        imgSau[indiceI]=aux;
+            if(conv<=20){
+                for(ym=y; ym<y+b2; ym++){                              
+                    for(xm=x; xm<x+bloque; xm++){                          
+                        indiceI=(ym)*info.width+xm;                           
+                        aux=imgSau[indiceI]*0;                       
+                        imgSau[indiceI]=0;
                     }                                                
                 }
             }
@@ -321,38 +324,43 @@ void * dilata(void *arg){
 
 
 
-/*UMBRALIZACION LOCAL METODO2*/
+/*UMBRALIZACION LOCAL METODO2
+Souvola ayuda a rellenar regiones dentro de obtejos o engrosarlos en imagenes binarias
+por lo que se calcula la media de pixeles y la desviacion estandar
+Se utiliza la media de la imagen umbralizada localmente con la mediana (imgBin) para engorsar la zona deseada
+tomando como base la imagen sustraccion
+https://www.tamps.cinvestav.mx/~wgomez/diapositivas/AID/Clase19.pdf <- Metodo Souvola
+*/
 void* sauvola(void *arg){
 register int y,x,ym,xm;
     int bloque=15;
     float media,desv;
-    int a,k=0.2;
+    int a,k=0.2;                                                            //Los valores de k 0.2 o 0.5
     double umbral;
     int indiceI;
     int nh=*(int*)arg;
     int tamBloque=info.height/NUM_HILOS;                                    //bloques por hilo
     int iniBloque=nh*tamBloque;                                             //inicio del bloque
     int finBloque=iniBloque+tamBloque;   
-    //unsigned char*subi=reservarMemoria(bloque,bloque);                                   //fin del bloque
   
-        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer mascara en la imagen
-            for(x=0; x<info.width-bloque; x++){                             //recorrer mascara en la imagen
+        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer imagen
+            for(x=0; x<info.width-bloque; x++){                             
                 media=0.0;
                 desv=0.0;
                 umbral=0;
                 a=0;
-                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
-                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
-                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
-                        media=media+otsu[indiceI]; //media
-                        a=a+pow(imagenSustrac[indiceI],2); // desv
+                for(ym=y; ym<y+bloque; ym++){                               //recorrer vecindad segun bloque
+                    for(xm=x; xm<x+bloque; xm++){                           
+                        indiceI=(ym)*info.width+xm;                         
+                        media=media+imgBin[indiceI];                        //calculo de media
+                        a=a+pow(imagenSustrac[indiceI],2);                  //calculo de desviacion
                     }                                                
                 }
             //CALCULO DE MEDIA Y DESV
             media=media/(bloque*bloque);
             desv=sqrt(a/(bloque*bloque)-pow(media,2));
 
-            umbral=media*(1+(k*(desv/128)-1));
+            umbral=media*(1+(k*(desv/128)-1));                              //Calculo de umbral segun Souvola
 
             indiceI=(y+1)*info.width+(x+1);
             imgSau[indiceI]=((imagenSustrac[indiceI])>=(umbral))?0:255;
@@ -362,7 +370,12 @@ register int y,x,ym,xm;
 }
 
 
-/*UMBRALIZACION LOCAL*/
+/*UMBRALIZACION LOCAL
+Se obtiene una subimagen de tamaño bloque para umbralizar la imagen de forma local
+para obtener un mejor resultado se utilizan los pixeles para la media de la imagen umbralizada general con otsu
+así se obtiene la media de los pixeles en 0 y 1 para obtener una imagen dilatada.
+
+*/
 void* subImagen(void *arg){
     register int y,x,ym,xm,i,j;
     int bloque=5;
@@ -371,15 +384,15 @@ void* subImagen(void *arg){
     int tamBloque=info.height/NUM_HILOS;                                    //bloques por hilo
     int iniBloque=nh*tamBloque;                                             //inicio del bloque
     int finBloque=iniBloque+tamBloque;   
-    //unsigned char*subi=reservarMemoria(bloque,bloque);                                   //fin del bloque
+
   
-        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer mascara en la imagen
-            for(x=0; x<info.width-bloque; x++){                             //recorrer mascara en la imagen
+        for(y=iniBloque-(nh*bloque); y<finBloque-bloque;y++){               //recorrer imagen
+            for(x=0; x<info.width-bloque; x++){                             
                 cont=0;
-                for(ym=y; ym<y+bloque; ym++){                               //recorrer mascara para operaciones
-                    for(xm=x; xm<x+bloque; xm++){                           //recorrer mascara con operaraciones
-                        indiceI=(ym)*info.width+xm;                           //indice de la imagen
-                        temp[cont]=otsu[indiceI];
+                for(ym=y; ym<y+bloque; ym++){                               //recorrer subimagen
+                    for(xm=x; xm<x+bloque; xm++){                           
+                        indiceI=(ym)*info.width+xm;                         //indice de la subimagen
+                        temp[cont]=otsu[indiceI];                           //Obtiene los valores de los pixeles en la subimagen
                         cont++;
                     }                                                
                 }
@@ -392,7 +405,7 @@ void* subImagen(void *arg){
                         temp[j+1]=aux;
                     }
             indiceI=(y+1)*info.width+(x+1);
-            imgBin[indiceI]=((imagenSustrac[indiceI])>=(temp[4]))?0:255;
+            imgBin[indiceI]=((imagenSustrac[indiceI])>=(temp[5]))?0:255;     //Se obtiene el valor de la media de los pixeles ordenados
             }
         }
     
@@ -450,7 +463,7 @@ int thotsu(unsigned char* imagen, uint32_t width, uint32_t height){
 }
 
 /*METODO DE UMBRALIZACION POR SEGMENTOS DE IMAGEN*/
-unsigned char * binarizar(unsigned char * imagen, int umbral, uint32_t width, uint32_t height){       //Segmentacion por umbral
+unsigned char * binarizar(unsigned char * imagen, int umbral, uint32_t width, uint32_t height){     
     register int x,y;
     int indice;
     unsigned char * bina;
@@ -469,7 +482,7 @@ unsigned char * binarizar(unsigned char * imagen, int umbral, uint32_t width, ui
 /*METODO DE SUSTRACCION DE IMAGENES (IMAGEN BASE - IMAGEN OBTENIDA)*/
 void sustraccion(unsigned char* imagenBase, unsigned char* imagenRep,uint32_t width, uint32_t height){
     register int x,y;
-    int indice,aux;
+    int indice,aux,cambio,i;
     for(y=0;y<height;y++){
         for(x=0;x<width;x++){
             indice=(y*width+x);
@@ -479,6 +492,7 @@ void sustraccion(unsigned char* imagenBase, unsigned char* imagenRep,uint32_t wi
             if(aux<=0)
                 aux=0;
             imagenSustrac[indice]=aux;
+            
 
         }
     }
@@ -600,19 +614,18 @@ void * momento2h(void *arg){
 
 /*MOMENTO 3*/
 void * momento3h(void *arg){
-    double Sx,Sy,u30,u03,u21,u12;
+    double cx,cy,u30,u03,u21,u12;
     double n30,n03,n21,n12,m3;
     unsigned char * imagen=imgBin;
     //momentos de orden 3
-    Sx=momento(imagen,3,0)/sqrt(pow(momento(imagen,2,0),3));
-    Sy=momento(imagen,0,3)/sqrt(pow(momento(imagen,0,2),3)); 
-    printf("\nSx %f Sy %f",Sx,Sy)      ;                            //momento estandar ÿ
+    cx=(momento(imagen,1,0))/(momento(imagen,0,0));                 //momento estandar ẍ
+    cy=(momento(imagen,0,1))/(momento(imagen,0,0));
     //printf("\n ---- MOMENTO 3 ---- \nMomentos Estandar: S=%d , Sÿ=%d ",Sx,Sy);
     //calculo de momentos centrales
-    u30=momento(imagen,3,0)-3*(Sx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(Sx,2));
-    u03=momento(imagen,0,3)-3*(Sy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(Sy,2));
-    u12=momento(imagen,1,2)-2*(Sy*momento(imagen,1,1))-(Sx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(Sy,2));
-    u21=momento(imagen,2,1)-2*(Sx*momento(imagen,1,1))-(Sy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(Sx,2));
+    u30=momento(imagen,3,0)-3*(cx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(cx,2));
+    u03=momento(imagen,0,3)-3*(cy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(cy,2));
+    u12=momento(imagen,1,2)-2*(cy*momento(imagen,1,1))-(cx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(cy,2));
+    u21=momento(imagen,2,1)-2*(cx*momento(imagen,1,1))-(cy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(cx,2));
     //printf("\nMomentos centrales: u30=%d, u03=%d , u12=%d , u21=%d ",u30,u03,u12,u21);
     //Calculo de momentos normalizados
     n30=normalizar(imagen,u30,3,0);
@@ -629,17 +642,17 @@ void * momento3h(void *arg){
 /*MOMENTO 4*/
 void * momento4h(void *arg){
     unsigned char * imagen=imgBin;
-    int Sx,Sy,u30,u03,u21,u12;
+    int cx,cy,u30,u03,u21,u12;
     double n30,n03,n21,n12,m4;
     //momentos estandar
-    Sx=momento(imagen,3,0)/sqrt(pow(momento(imagen,2,0),3));
-    Sy=momento(imagen,0,3)/sqrt(pow(momento(imagen,0,2),3));                                     //momento estandar ÿ
+   cx=(momento(imagen,1,0))/(momento(imagen,0,0));                 //momento estandar ẍ
+   cy=(momento(imagen,0,1))/(momento(imagen,0,0));                                    //momento estandar ÿ
     //printf("\n ---- MOMENTO 4 ---- \nMomentos Estandar: ẍ=%d , ÿ=%d ",cx,cy);
     //calculo de momentos centrales
-    u30=momento(imagen,3,0)-3*(Sx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(Sx,2));
-    u03=momento(imagen,0,3)-3*(Sy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(Sy,2));
-    u12=momento(imagen,1,2)-2*(Sy*momento(imagen,1,1))-(Sx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(Sy,2));
-    u21=momento(imagen,2,1)-2*(Sx*momento(imagen,1,1))-(Sy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(Sx,2));
+    u30=momento(imagen,3,0)-3*(cx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(cx,2));
+    u03=momento(imagen,0,3)-3*(cy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(cy,2));
+    u12=momento(imagen,1,2)-2*(cy*momento(imagen,1,1))-(cx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(cy,2));
+    u21=momento(imagen,2,1)-2*(cx*momento(imagen,1,1))-(cy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(cx,2));
     //printf("\nMomentos centrales: u30=%d, u03=%d , u12=%d , u21=%d ",u30,u03,u12,u21);
     //Calculo de momentos normalizados
     n30=normalizar(imagen,u30,3,0);
@@ -656,17 +669,17 @@ void * momento4h(void *arg){
 /*MOMENTO 5*/
 void * momento5h(void *arg){
     unsigned char * imagen=imgBin;
-    int Sx,Sy,u30,u03,u21,u12;
+    int cx,cy,u30,u03,u21,u12;
     double n30,n03,n21,n12,p1,p2,p3,p4,m5;
     //momentos estandar
-    Sx=momento(imagen,3,0)/sqrt(pow(momento(imagen,2,0),3));
-    Sy=momento(imagen,0,3)/sqrt(pow(momento(imagen,0,2),3));                                     //momento estandar ÿ
+    cx=(momento(imagen,1,0))/(momento(imagen,0,0));                 //momento estandar ẍ
+    cy=(momento(imagen,0,1))/(momento(imagen,0,0));                                    //momento estandar ÿ
     //printf("\n ---- MOMENTO 5 ---- \nMomentos Estandar: ẍ=%d , ÿ=%d ",cx,cy);
     //calculo de momentos centrales
-    u30=momento(imagen,3,0)-3*(Sx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(Sx,2));
-    u03=momento(imagen,0,3)-3*(Sy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(Sy,2));
-    u12=momento(imagen,1,2)-2*(Sy*momento(imagen,1,1))-(Sx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(Sy,2));
-    u21=momento(imagen,2,1)-2*(Sx*momento(imagen,1,1))-(Sy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(Sx,2));
+    u30=momento(imagen,3,0)-3*(cx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(cx,2));
+    u03=momento(imagen,0,3)-3*(cy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(cy,2));
+    u12=momento(imagen,1,2)-2*(cy*momento(imagen,1,1))-(cx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(cy,2));
+    u21=momento(imagen,2,1)-2*(cx*momento(imagen,1,1))-(cy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(cx,2));
     //printf("\nMomentos centrales: u30=%d, u03=%d , u12=%d , u21=%d ",u30,u03,u12,u21);
     //Calculo de momentos normalizados
     n30=normalizar(imagen,u30,3,0);
@@ -688,11 +701,9 @@ void * momento5h(void *arg){
 /*MOMENTO 6*/
 void * momento6h(void *arg){
     unsigned char * imagen=imgBin;
-    int Sx,Sy,cx,cy,u30,u03,u21,u12,u20,u02,u11;
+    int cx,cy,u30,u03,u21,u12,u20,u02,u11;
     double n30,n03,n21,n12,n02,n20,n11,p1,p2,p3,m6;
     //momentos estandar
-    Sx=momento(imagen,3,0)/sqrt(pow(momento(imagen,2,0),3));
-    Sy=momento(imagen,0,3)/sqrt(pow(momento(imagen,0,2),3));
     cx=(momento(imagen,1,0))/(momento(imagen,0,0));                                      //momento estandar ẍ
     cy=(momento(imagen,0,1))/(momento(imagen,0,0));                                       //momento estandar ÿ
     //printf("\n ---- MOMENTO 6 ---- \nMomentos Estandar: ẍ=%d , ÿ=%d ",cx,cy);
@@ -700,10 +711,10 @@ void * momento6h(void *arg){
     u20=momento(imagen,2,0)-(cx*momento(imagen,1,0));
     u02=momento(imagen,0,2)-(cy*momento(imagen,0,1));
     u11=momento(imagen,1,1)-(cx*momento(imagen,0,1));
-    u30=momento(imagen,3,0)-3*(Sx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(Sx,2));
-    u03=momento(imagen,0,3)-3*(Sy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(Sy,2));
-    u12=momento(imagen,1,2)-2*(Sy*momento(imagen,1,1))-(Sx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(Sy,2));
-    u21=momento(imagen,2,1)-2*(Sx*momento(imagen,1,1))-(Sy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(Sx,2));
+    u30=momento(imagen,3,0)-3*(cx*momento(imagen,2,0))+2*(momento(imagen,1,0)*pow(cx,2));
+    u03=momento(imagen,0,3)-3*(cy*momento(imagen,0,2))+2*(momento(imagen,0,1)*pow(cy,2));
+    u12=momento(imagen,1,2)-2*(cy*momento(imagen,1,1))-(cx*momento(imagen,0,2))+2*(momento(imagen,1,0)*pow(cy,2));
+    u21=momento(imagen,2,1)-2*(cx*momento(imagen,1,1))-(cy*momento(imagen,2,0))+2*(momento(imagen,0,1)*pow(cx,2));
     //printf("\nMomentos centrales: u30=%d, u03=%d , u12=%d , u21=%d ",u30,u03,u12,u21);
     //Calculo de momentos normalizados
     n30=normalizar(imagen,u30,3,0);
@@ -728,17 +739,17 @@ void * momento6h(void *arg){
 /*MOMENTO 7*/
 void * momento7h(void *arg){
     unsigned char * imagen=imgBin;
-    int Sx,Sy,u30,u03,u21,u12;
+    int cx,cy,u30,u03,u21,u12;
     double n30,n03,n21,n12,p1,p2,p3,p4,m7;
     //momentos estandar
-    Sx=momento(imagen,3,0)/sqrt(pow(momento(imagen,2,0),3));
-    Sy=momento(imagen,0,3)/sqrt(pow(momento(imagen,0,2),3));                                     //momento estandar ÿ
+    cx=(momento(imagen,1,0))/(momento(imagen,0,0));                 //momento estandar ẍ
+    cy=(momento(imagen,0,1))/(momento(imagen,0,0));                                    //momento estandar ÿ
     //printf("\n ---- MOMENTO 7 ---- \nMomentos Estandar: ẍ=%d , ÿ=%d ",cx,cy);
     //calculo de momentos centrales
-    u30=momento(imagen,3,0)-3*(Sx*momento(imagen,2,0))+2*(momento(imagen,1,0)*Sx*Sx);
-    u03=momento(imagen,0,3)-3*(Sy*momento(imagen,0,2))+2*(momento(imagen,0,1)*Sy*Sy);
-    u12=momento(imagen,1,2)-2*(Sy*momento(imagen,1,1))-(Sx*momento(imagen,0,2))+2*(momento(imagen,1,0)*Sy*Sy);
-    u21=momento(imagen,2,1)-2*(Sx*momento(imagen,1,1))-(Sy*momento(imagen,2,0))+2*(momento(imagen,0,1)*Sx*Sx);
+    u30=momento(imagen,3,0)-3*(cx*momento(imagen,2,0))+2*(momento(imagen,1,0)*cx*cx);
+    u03=momento(imagen,0,3)-3*(cy*momento(imagen,0,2))+2*(momento(imagen,0,1)*cy*cy);
+    u12=momento(imagen,1,2)-2*(cy*momento(imagen,1,1))-(cx*momento(imagen,0,2))+2*(momento(imagen,1,0)*cy*cy);
+    u21=momento(imagen,2,1)-2*(cx*momento(imagen,1,1))-(cy*momento(imagen,2,0))+2*(momento(imagen,0,1)*cx*cx);
     printf("\nMomentos centrales: u30=%d, u03=%d , u12=%d , u21=%d ",u30,u03,u12,u21);
     //Calculo de momentos normalizados
     n30=normalizar(imagen,u30,3,0);
