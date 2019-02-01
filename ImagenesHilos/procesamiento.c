@@ -12,7 +12,7 @@ unsigned char* RGBToGray(unsigned char *imagen,uint32_t width, uint32_t height);
 void GraytoRGB(unsigned char* imagenRGB, unsigned char* imagenGray,uint32_t width, uint32_t height);
 void brilloImagen(unsigned char* imagenGray,uint32_t width, uint32_t height);
 unsigned char* reservarMemoria(uint32_t width, uint32_t height);
-void * funHilo(void *arg);
+void * gaussiano(void *arg);
 int thotsu(unsigned char * imagen, uint32_t width, uint32_t height );
 unsigned char * binarizar(unsigned char * imagen, int umbral, uint32_t width, uint32_t height);
 void sustraccion(unsigned char* imagenBase, unsigned char* imagenRep,uint32_t width, uint32_t height);
@@ -60,8 +60,8 @@ int main(){
     int *hilo,i,k,nhs[NUM_HILOS];                                            //Arreglo de hilos
     pthread_t tids[NUM_HILOS];                                               //Creación de hilos
 
-    imagenRGB=abrirBMP("base10.bmp",&info);
-    nueva=abrirBMP("nueva10.bmp",&info);
+    imagenRGB=abrirBMP("base16.bmp",&info);
+    nueva=abrirBMP("nueva1666.bmp",&info);
     
     displayInfo(&info);
     imagenGray=RGBToGray(imagenRGB,info.width,info.height);
@@ -81,7 +81,7 @@ int main(){
 
     for(i=0;i<4;i++){
         nhs[i]=i;                                                            //creacion de hilos
-        pthread_create(&tids[i],NULL,funHilo,(void *)&nhs[i]);               //crea varios hilos
+        pthread_create(&tids[i],NULL,gaussiano,(void *)&nhs[i]);               //crea varios hilos
     }
     for(k=0;k<4;k++){
          pthread_join(tids[k],(void**)&hilo);                                //espera a que termine la ejecucion del hilo
@@ -135,11 +135,13 @@ int main(){
     //momentoHu(imgBin);*/
 
     GraytoRGB(imagenRGB,imgBin,info.width,info.height);
-    guardarBMP("imagen_process.bmp",&info,imagenRGB);
-    GraytoRGB(imagenRGB,imagenSustrac,info.width,info.height);
-    guardarBMP("imagen_sustrac.bmp",&info,imagenRGB);
+    guardarBMP("imagen_imgBin.bmp",&info,imagenRGB);
+    GraytoRGB(imagenRGB,otsu,info.width,info.height);
+    guardarBMP("imagen_otsu.bmp",&info,imagenRGB);
     GraytoRGB(imagenRGB,imgSau,info.width,info.height);
     guardarBMP("imagen_sauvola.bmp",&info,imagenRGB);
+    GraytoRGB(imagenRGB,imagenSustrac,info.width,info.height);
+    guardarBMP("imagen_sustrac.bmp",&info,imagenRGB);
 
     //liberar memoria
     free(nueva);
@@ -154,7 +156,7 @@ int main(){
 
 
 /*  FUNCION POR BLOQUES FILTRO GAUSSIANO*/
-void * funHilo(void *arg){
+void * gaussiano(void *arg){
     register int y,x,ym,xm;
     int conv,conv2, indiceI,indiceM;
     unsigned char mascara[DIMASK*DIMASK]={1,2,1,
@@ -371,7 +373,7 @@ register int y,x,ym,xm;
 
 
 /*UMBRALIZACION LOCAL
-Se obtiene una subimagen de tamaño bloque para umbralizar la imagen de forma local
+Se obtiene una subimagen de tamaño bloque para umbralizar la imagen de forma local y rellenar el pixel según su vencindad
 para obtener un mejor resultado se utilizan los pixeles para la media de la imagen umbralizada general con otsu
 así se obtiene la media de los pixeles en 0 y 1 para obtener una imagen dilatada.
 
@@ -415,7 +417,7 @@ void* subImagen(void *arg){
 /* METODO DE UMBRALIZACION DE OTSU */
 int thotsu(unsigned char* imagen, uint32_t width, uint32_t height){
     int i;
-    int histograma[255];
+    int histograma[255];                                                       //Arreglo guarda los valores del histograma
     register int x,y;
     int ValorMax = 0;
     int indice,h=0,sum=0;
@@ -428,7 +430,7 @@ int thotsu(unsigned char* imagen, uint32_t width, uint32_t height){
         histograma[i]=0;
     }
     
-    for(y=0;y<height;y++){                                                    //Creacion del histograma por clases de pixeñes
+    for(y=0;y<height;y++){                                                    //Creacion del histograma por clases de pixeles
         for(x=0;x<width;x++){
             indice=(y*width+x);
             h=imagen[indice];
@@ -458,7 +460,6 @@ int thotsu(unsigned char* imagen, uint32_t width, uint32_t height){
 			threshold = t;   
 		}
 	}
-    //printf("Umbralizacion OTSU: %d \n",threshold);
     return threshold;   
 }
 

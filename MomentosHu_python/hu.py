@@ -20,19 +20,19 @@ def mimagen(img):
 def momento(img,i,j):
     #Arreglo al sacar el momento de la imagen
     arr=[]
+    sum=0
     cont=0
     for y in range(height):
         for x in range(width):
             aux2=img[y][x]
             if aux2==255:
                 aux=(pow(x,i)*pow(y,j))
-                #print(aux)
                 arr.append(aux)
+                sum+=aux
         
     #Sumatoria de (x^i y^j)(I(x,y))
-    sum=0 
-    for ii in range(len(arr)):
-        sum=sum+arr[ii]
+    #for ii in range(len(arr)):
+    #    sum=sum+arr[ii]
     return sum
 
 def momento_central(img,i,j):
@@ -104,29 +104,18 @@ def momento2(img):
     print("n11: ",n11)
 
 def momento3(img):
-    n30=momento(img,3,0)-(3*Sx*momento(img,2,0))+(2*momento(img,1,0)*Sx*Sx)
-    n03=momento(img,0,3)-(3*Sy*momento(img,0,2))+(2*momento(img,0,1)*Sy*Sy)
-    n12=momento(img,1,2)-(2*Sy*momento(img,1,1))-(Cx*momento(img,0,2))+(2*momento(img,1,0)*Sy*Sy)
-    n21=momento(img,2,1)-(2*Sx*momento(img,1,1))-(Cy*momento(img,2,0))+(2*momento(img,0,1)*Sx*Sx)
-    print("n30: ",n30)
-    print("n03: ",n03)
-    print("n12: ",n12)
-    print("n21: ",n21)
-
-def momento4(img):
-    n30=momento(img,3,0)-(3*Sx*momento(img,2,0))+(2*momento(img,1,0)*Sx*Sx)
-    n03=momento(img,0,3)-(3*Sy*momento(img,0,2))+(2*momento(img,0,1)*Sy*Sy)
-    n12=momento(img,1,2)-(2*Sy*momento(img,1,1))-(Sx*momento(img,0,2))+(2*momento(img,1,0)*Sy*Sy)
-    n21=momento(img,2,1)-(2*Sx*momento(img,1,1))-(Sy*momento(img,2,0))+(2*momento(img,0,1)*Sx*Sx)
+    n30=momento(img,3,0)-(3*Cx*momento(img,2,0))+(2*momento(img,1,0)*Cx*Cx)
+    n03=momento(img,0,3)-(3*Cy*momento(img,0,2))+(2*momento(img,0,1)*Cy*Cy)
+    n12=momento(img,1,2)-(2*Cy*momento(img,1,1))-(Cx*momento(img,0,2))+(2*momento(img,1,0)*Cy*Cy)
+    n21=momento(img,2,1)-(2*Cx*momento(img,1,1))-(Cy*momento(img,2,0))+(2*momento(img,0,1)*Cx*Cx)
     print("n30: ",n30)
     print("n03: ",n03)
     print("n12: ",n12)
     print("n21: ",n21)
 
 
-
-#Abrir imagen
-img2 = cv2.imread('imagen.bmp',0)
+#Abrir hoja
+img2 = cv2.imread('hoja.png',0)
 # Imagen binarizada
 ret1,bin = cv2.threshold(img2,180,255,cv2.THRESH_BINARY)
 #Dimensiones de la imagen
